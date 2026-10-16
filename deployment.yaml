@@ -1,0 +1,29 @@
+# ---------------------------------------------------------------------------
+# deployment.yaml - CloudFormation GitSync deployment file
+# Project : Onward Logistics - Secure Onboarding at Scale
+#
+# This file tells CloudFormation GitSync which template to deploy and with
+# which parameters/tags. Every change to this file or to the template is a
+# Git commit, which gives the audit trail of who changed access and when.
+#
+# Usage (console): CloudFormation > Create stack > Sync from Git
+#   - Stack name      : onward-onboarding
+#   - Repository      : <your repo>  (via AWS CodeConnections)
+#   - Branch          : main
+#   - Deployment file : deployment.yaml
+#   - Capabilities    : CAPABILITY_NAMED_IAM
+# ---------------------------------------------------------------------------
+
+template-file-path: templates/onboarding-template.yaml
+
+parameters:
+  ProjectTag: onward-logistics-onboarding
+  ApprovedBy: head-of-security
+  # Set to "false" if the account already has an all-region trail.
+  EnableAuditTrail: "true"
+
+tags:
+  Project: onward-logistics-onboarding
+  Owner: platform-security
+  ManagedBy: cloudformation-gitsync
+  CostCenter: engineering

@@ -2,3 +2,4 @@ evidence-*/
 .env
 *.pem
 .claude/
+pr-descriptions/

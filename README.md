@@ -73,31 +73,9 @@ In planning, the client set three requirements:
 
 ## Solution Architecture
 
-> Full diagrams: [open in draw.io](https://app.diagrams.net/#Hjadofils%2Fonward-aws-lab-journal%2Fmain%2Fdocs%2Farchitecture.drawio). Pages: architecture, access change flow, on-call permission decision, secure first sign-in.
+![Solution architecture: GitHub, GitSync and the deploy role create the stack; each user gets access from a group and is capped by a permissions boundary; Secrets Manager supplies first passwords; CloudTrail logs every IAM call to an encrypted bucket](docs/images/01-architecture.png)
 
-```mermaid
-flowchart LR
-    Dev[Engineer commits to main] --> Git[(GitHub repository)]
-    Git -->|CodeConnections| GS[CloudFormation GitSync]
-    GS --> Stack[Stack: onward-onboarding]
-
-    Stack --> G1[onward-s3-engineers]
-    Stack --> G2[onward-compute-engineers]
-    Stack --> G3[onward-oncall-observers]
-    Stack --> SM[Secrets Manager<br/>onward/onboarding/*]
-    Stack --> CT[CloudTrail<br/>onward-iam-audit-trail]
-
-    G1 --> U1[s3-user]
-    G2 --> U2[ec2-user-1]
-    G3 --> U3[ec2-user-2]
-
-    B1[[boundary: s3-engineer]] -.caps.-> U1
-    B2[[boundary: compute-engineer]] -.caps.-> U2
-    B3[[boundary: compute-observer<br/>Deny create/terminate]] -.caps.-> U3
-
-    SM -.first password.-> U1 & U2 & U3
-    CT --> S3[(Encrypted, versioned<br/>audit log bucket)]
-```
+Source: [docs/architecture.drawio](docs/architecture.drawio) · [open in draw.io](https://app.diagrams.net/#Hjadofils%2Fonward-aws-lab-journal%2Fmain%2Fdocs%2Farchitecture.drawio)
 
 ### Design Principles
 
@@ -129,11 +107,15 @@ A user's effective permissions are only what both their identity policies **and*
 
 Because an explicit `Deny` always wins in IAM policy evaluation, `ec2-user-2` cannot create or terminate compute **even if `AdministratorAccess` is attached to the user or their group**. The evidence script's tamper test proves this.
 
+![IAM policy evaluation for ec2-user-2: an explicit Deny in the boundary stops ec2:RunInstances before any Allow is considered](docs/images/03-oncall-permission-decision.png)
+
 ### Secure First Login
 
 1. CloudFormation creates one Secrets Manager secret per user (`onward/onboarding/<username>`) with a generated 24-character password.
 2. The user's login profile reads the password through a dynamic reference (`{{resolve:secretsmanager:...}}`), so the password never appears in the template, in Git or in stack outputs.
 3. `PasswordResetRequired: true` forces the engineer to set their own password at first sign-in.
+
+![Secure first sign-in: generated secret, dynamic reference, forced reset, private hand-over, new password](docs/images/04-secure-first-sign-in.png)
 
 ### Audit Trail
 
@@ -154,6 +136,7 @@ Because an explicit `Deny` always wins in IAM policy evaluation, `ec2-user-2` ca
 │   └── evidence.sh                     # Verification and evidence collector
 ├── docs/
 │   ├── architecture.drawio             # draw.io: architecture and flow diagrams (4 pages)
+│   ├── images/                         # PNG exports of each diagram page
 │   └── onward-lab-week-1-aws.md        # Lab brief and client requirements
 └── README.md
 ```
@@ -284,6 +267,8 @@ The engineer signs in to the AWS console and must set a new password immediately
 4. Open a pull request that states who needs the access, why, and who approved it.
 5. After review and merge, GitSync deploys the change, and Git plus CloudTrail record who made it and when.
 
+![Access change flow: branch, pull request, change-set comment, Head of Security approval, merge, GitSync deploy, verification, audit record](docs/images/02-access-change-flow.png)
+
 Never change IAM resources from this stack in the console. Drift detection reports any such change.
 
 ## Requirements Traceability
@@ -307,5 +292,5 @@ The CloudTrail log bucket uses `DeletionPolicy: Retain` so that audit records ar
 
 - **Discovery report:** research report and business value
 - **Repository:** this repository, containing the CloudFormation template
-- **Architecture diagram:** [open in draw.io](https://app.diagrams.net/#Hjadofils%2Fonward-aws-lab-journal%2Fmain%2Fdocs%2Farchitecture.drawio) ([source file](docs/architecture.drawio)); summary in [Solution Architecture](#solution-architecture)
+- **Architecture diagram:** shown in [Solution Architecture](#solution-architecture) ([image](docs/images/01-architecture.png), [open in draw.io](https://app.diagrams.net/#Hjadofils%2Fonward-aws-lab-journal%2Fmain%2Fdocs%2Farchitecture.drawio))
 - **Live review:** explanation and defense of the design decisions

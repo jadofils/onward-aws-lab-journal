@@ -73,6 +73,8 @@ In planning, the client set three requirements:
 
 ## Solution Architecture
 
+> Full diagrams: [open in draw.io](https://app.diagrams.net/#Hjadofils%2Fonward-aws-lab-journal%2Fmain%2Fdocs%2Farchitecture.drawio). Pages: architecture, access change flow, on-call permission decision, secure first sign-in.
+
 ```mermaid
 flowchart LR
     Dev[Engineer commits to main] --> Git[(GitHub repository)]
@@ -151,6 +153,7 @@ Because an explicit `Deny` always wins in IAM policy evaluation, `ec2-user-2` ca
 │   ├── create-deploy-role.sh           # One-time bootstrap: GitSync and deployment IAM role
 │   └── evidence.sh                     # Verification and evidence collector
 ├── docs/
+│   ├── architecture.drawio             # draw.io: architecture and flow diagrams (4 pages)
 │   └── onward-lab-week-1-aws.md        # Lab brief and client requirements
 └── README.md
 ```
@@ -304,5 +307,5 @@ The CloudTrail log bucket uses `DeletionPolicy: Retain` so that audit records ar
 
 - **Discovery report:** research report and business value
 - **Repository:** this repository, containing the CloudFormation template
-- **Architecture diagram:** see [Solution Architecture](#solution-architecture)
+- **Architecture diagram:** [open in draw.io](https://app.diagrams.net/#Hjadofils%2Fonward-aws-lab-journal%2Fmain%2Fdocs%2Farchitecture.drawio) ([source file](docs/architecture.drawio)); summary in [Solution Architecture](#solution-architecture)
 - **Live review:** explanation and defense of the design decisions

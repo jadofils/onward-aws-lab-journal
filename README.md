@@ -148,6 +148,7 @@ Because an explicit `Deny` always wins in IAM policy evaluation, `ec2-user-2` ca
 ├── templates/
 │   └── onboarding-template.yaml        # CloudFormation template
 ├── scripts/
+│   ├── create-deploy-role.sh           # One-time bootstrap: GitSync and deployment IAM role
 │   └── evidence.sh                     # Verification and evidence collector
 ├── docs/
 │   └── onward-lab-week-1-aws.md        # Lab brief and client requirements
@@ -158,13 +159,31 @@ Because an explicit `Deny` always wins in IAM policy evaluation, `ec2-user-2` ca
 
 - An AWS account where you are allowed to create IAM users, groups, policies, Secrets Manager secrets and CloudTrail trails
 - A connection between AWS CodeConnections and this GitHub repository
+- The deployment role `onward-cfn-deploy-role`, created once with `scripts/create-deploy-role.sh` (see [Deployment](#deployment))
 - AWS CLI v2, configured with credentials for the target account (needed for the evidence script)
 - Bash 4+ (Linux, macOS, WSL or Git Bash)
 - Optional: [`cfn-lint`](https://github.com/aws-cloudformation/cfn-lint) for local validation
 
 ## Deployment
 
-### Option A: CloudFormation GitSync (recommended)
+### Step 1: Create the deployment role (once per account)
+
+GitSync needs an IAM role before the stack exists, so this role is created by a bootstrap script instead of the template. In **AWS CloudShell**, upload `scripts/create-deploy-role.sh` and run:
+
+```bash
+bash create-deploy-role.sh
+```
+
+The script creates `onward-cfn-deploy-role` with two customer-managed policies, and is safe to run again:
+
+| Policy | Purpose |
+|--------|---------|
+| `onward-cfn-gitsync-policy` | Lets GitSync create and run change sets and watch the repository |
+| `onward-cfn-deploy-policy` | Lets CloudFormation create only the resources in the template (`onward-*` IAM entities, `onward/onboarding/*` secrets, the audit bucket and trail) |
+
+The role trusts both `cloudformation.sync.codeconnections.amazonaws.com` and `cloudformation.amazonaws.com`, so it can be used in both IAM role fields below.
+
+### Step 2, Option A: CloudFormation GitSync (recommended)
 
 1. Open **CloudFormation › Create stack › Sync from Git**.
 2. Enter the following settings:
@@ -175,11 +194,14 @@ Because an explicit `Deny` always wins in IAM policy evaluation, `ec2-user-2` ca
    | Repository | this repository, through AWS CodeConnections |
    | Branch | `main` |
    | Deployment file path | `deployment.yaml` |
+   | Git sync IAM role | `onward-cfn-deploy-role` |
+   | Enable comment on pull request | On |
+   | Stack IAM role (Permissions) | `onward-cfn-deploy-role` |
    | Capabilities | `CAPABILITY_NAMED_IAM` |
 
-3. Create the stack. From then on, every merge to `main` updates the stack automatically.
+3. Create the stack. From then on, every merge to `main` updates the stack automatically, and CloudFormation comments the planned changes on each pull request.
 
-### Option B: AWS CLI (local testing)
+### Step 2, Option B: AWS CLI (local testing)
 
 ```bash
 cfn-lint templates/onboarding-template.yaml

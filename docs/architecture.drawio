@@ -11,8 +11,8 @@
         </mxCell>
 
         <!-- Outside AWS -->
-        <mxCell id="people" value="&lt;b&gt;Engineers and&lt;br&gt;Head of Security&lt;/b&gt;" style="sketch=0;outlineConnect=0;fontColor=#232F3E;fillColor=#232F3D;strokeColor=none;dashed=0;verticalLabelPosition=bottom;verticalAlign=top;align=center;html=1;fontSize=12;aspect=fixed;pointerEvents=1;shape=mxgraph.aws4.users;" vertex="1" parent="1">
-          <mxGeometry x="81" y="170" width="78" height="78" as="geometry" />
+        <mxCell id="people" value="&lt;b&gt;Engineers and&lt;br&gt;Head of Security&lt;/b&gt;" style="sketch=0;outlineConnect=0;fontColor=#232F3E;fillColor=#232F3D;strokeColor=none;dashed=0;verticalLabelPosition=top;verticalAlign=bottom;align=center;html=1;fontSize=12;aspect=fixed;pointerEvents=1;shape=mxgraph.aws4.users;" vertex="1" parent="1">
+          <mxGeometry x="81" y="190" width="78" height="78" as="geometry" />
         </mxCell>
         <mxCell id="github" value="&lt;b&gt;GitHub repository&lt;/b&gt;&lt;br&gt;onward-aws-lab-journal&lt;br&gt;&lt;br&gt;deployment.yaml&lt;br&gt;templates/onboarding-template.yaml&lt;br&gt;scripts/" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#F5F5F5;strokeColor=#24292F;fontSize=11;arcSize=6;" vertex="1" parent="1">
           <mxGeometry x="20" y="400" width="200" height="130" as="geometry" />
@@ -30,13 +30,13 @@
         <mxCell id="codeconn" value="&lt;b&gt;AWS CodeConnections&lt;/b&gt;&lt;br&gt;GitHub connection" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#E7157B;fontSize=11;" vertex="1" parent="1">
           <mxGeometry x="310" y="120" width="170" height="60" as="geometry" />
         </mxCell>
-        <mxCell id="gitsync" value="&lt;b&gt;CloudFormation GitSync&lt;/b&gt;&lt;br&gt;watches main" style="sketch=0;outlineConnect=0;fontColor=#232F3E;fillColor=#E7157B;strokeColor=#ffffff;dashed=0;verticalLabelPosition=bottom;verticalAlign=top;align=center;html=1;fontSize=11;aspect=fixed;shape=mxgraph.aws4.resourceIcon;resIcon=mxgraph.aws4.cloudformation;" vertex="1" parent="1">
+        <mxCell id="gitsync" value="&lt;b&gt;CloudFormation&lt;br&gt;GitSync&lt;/b&gt;&lt;br&gt;watches main" style="sketch=0;outlineConnect=0;fontColor=#232F3E;fillColor=#E7157B;strokeColor=#ffffff;dashed=0;labelPosition=right;verticalLabelPosition=middle;verticalAlign=middle;align=left;spacingLeft=6;html=1;fontSize=11;aspect=fixed;shape=mxgraph.aws4.resourceIcon;resIcon=mxgraph.aws4.cloudformation;" vertex="1" parent="1">
           <mxGeometry x="356" y="240" width="78" height="78" as="geometry" />
         </mxCell>
         <mxCell id="deployrole" value="&lt;b&gt;onward-cfn-deploy-role&lt;/b&gt;&lt;br&gt;onward-cfn-gitsync-policy&lt;br&gt;onward-cfn-deploy-policy" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#DD344C;fontSize=11;" vertex="1" parent="1">
           <mxGeometry x="310" y="390" width="170" height="70" as="geometry" />
         </mxCell>
-        <mxCell id="stack" value="&lt;b&gt;Stack&lt;/b&gt;&lt;br&gt;onward-onboarding" style="sketch=0;outlineConnect=0;fontColor=#232F3E;fillColor=#E7157B;strokeColor=#ffffff;dashed=0;verticalLabelPosition=bottom;verticalAlign=top;align=center;html=1;fontSize=11;aspect=fixed;shape=mxgraph.aws4.resourceIcon;resIcon=mxgraph.aws4.cloudformation;" vertex="1" parent="1">
+        <mxCell id="stack" value="&lt;b&gt;Stack&lt;/b&gt;&lt;br&gt;onward-onboarding&lt;br&gt;&lt;i&gt;creates every IAM, Secrets Manager&lt;br&gt;and CloudTrail resource shown&lt;/i&gt;" style="sketch=0;outlineConnect=0;fontColor=#232F3E;fillColor=#E7157B;strokeColor=#ffffff;dashed=0;verticalLabelPosition=bottom;verticalAlign=top;align=center;html=1;fontSize=11;aspect=fixed;shape=mxgraph.aws4.resourceIcon;resIcon=mxgraph.aws4.cloudformation;" vertex="1" parent="1">
           <mxGeometry x="356" y="530" width="78" height="78" as="geometry" />
         </mxCell>
 
@@ -123,10 +123,12 @@
         <mxCell id="e5" value="creates / updates" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;endArrow=block;endFill=1;fontSize=11;strokeColor=#545B64;labelBackgroundColor=#ffffff;" edge="1" parent="1" source="deployrole" target="stack">
           <mxGeometry relative="1" as="geometry" />
         </mxCell>
-        <mxCell id="e6" value="change set&lt;br&gt;comment on PR" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;endArrow=block;endFill=1;fontSize=11;strokeColor=#545B64;labelBackgroundColor=#ffffff;dashed=1;exitX=0;exitY=0.75;entryX=1;entryY=0.75;" edge="1" parent="1" source="gitsync" target="github">
-          <mxGeometry relative="1" as="geometry" />
+        <mxCell id="e6" value="change set&lt;br&gt;comment on PR" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;endArrow=block;endFill=1;fontSize=11;strokeColor=#545B64;labelBackgroundColor=#ffffff;dashed=1;exitX=0;exitY=0.5;entryX=1;entryY=0.75;" edge="1" parent="1" source="gitsync" target="github">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points"><mxPoint x="295" y="279" /><mxPoint x="295" y="498" /></Array>
+          </mxGeometry>
         </mxCell>
-        <mxCell id="e7" value="creates users, groups,&lt;br&gt;boundaries, secrets, trail" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;endArrow=block;endFill=1;fontSize=11;strokeColor=#545B64;labelBackgroundColor=#ffffff;exitX=1;exitY=0.5;entryX=0;entryY=0.9;" edge="1" parent="1" source="stack" target="iam">
+        <mxCell id="e7" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;endArrow=block;endFill=1;fontSize=11;strokeColor=#545B64;exitX=1;exitY=0.5;entryX=0;entryY=0.82;" edge="1" parent="1" source="stack" target="iam">
           <mxGeometry relative="1" as="geometry" />
         </mxCell>
 
@@ -157,8 +159,10 @@
         <mxCell id="e9" value="every IAM&lt;br&gt;API call" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;endArrow=block;endFill=1;fontSize=11;strokeColor=#E7157B;labelBackgroundColor=#ffffff;exitX=1;exitY=0.6;" edge="1" parent="1" source="iam" target="trail">
           <mxGeometry relative="1" as="geometry" />
         </mxCell>
-        <mxCell id="e10" value="log files" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;endArrow=block;endFill=1;fontSize=11;strokeColor=#7AA116;labelBackgroundColor=#ffffff;" edge="1" parent="1" source="trail" target="bucket">
-          <mxGeometry relative="1" as="geometry" />
+        <mxCell id="e10" value="log files" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;endArrow=block;endFill=1;fontSize=11;strokeColor=#7AA116;labelBackgroundColor=#ffffff;exitX=1;exitY=0.5;entryX=1;entryY=0.5;" edge="1" parent="1" source="trail" target="bucket">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points"><mxPoint x="1490" y="419" /><mxPoint x="1490" y="649" /></Array>
+          </mxGeometry>
         </mxCell>
 
         <!-- Legend -->

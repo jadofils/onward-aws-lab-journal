@@ -14,14 +14,21 @@
 #   - Capabilities    : CAPABILITY_NAMED_IAM
 # ---------------------------------------------------------------------------
 
+# Path of the CloudFormation template, relative to the repository root.
+# This file must stay at the root; the template can live in a folder.
 template-file-path: templates/onboarding-template.yaml
 
+# Values passed to the template's Parameters section on every deploy.
 parameters:
+  # Becomes the Project tag on resources in the template.
   ProjectTag: onward-logistics-onboarding
+  # Recorded as the ApprovedBy tag on every user. Change it when a different person approves.
   ApprovedBy: head-of-security
   # Set to "false" if the account already has an all-region trail.
   EnableAuditTrail: "true"
 
+# Stack-level tags. CloudFormation copies them onto every resource that supports tags,
+# so anyone can see who owns the resources and how they are managed.
 tags:
   Project: onward-logistics-onboarding
   Owner: platform-security

@@ -26,25 +26,35 @@
 # cloudtrail:LookupEvents/DescribeTrails/GetTrailStatus, sts:GetCallerIdentity
 # (and iam:Attach/DetachGroupPolicy, iam:Attach/DetachUserPolicy for -t).
 # =============================================================================
+
+# Stop on unset variables and failed pipes. "-e" is left out on purpose,
+# so one failed check is reported and the script carries on with the rest.
 set -uo pipefail
 
 # ----------------------------- configuration ---------------------------------
+# Defaults. The -s, -r and -o options can override the first three.
 STACK_NAME="onward-onboarding"
+# Region comes from the environment if set; otherwise the AWS CLI default is used.
 REGION="${AWS_REGION:-${AWS_DEFAULT_REGION:-}}"
+# UTC timestamp, used to name the report folder.
 TIMESTAMP="$(date -u +%Y%m%dT%H%M%SZ)"
 OUT_DIR=""
 TAMPER_TEST=false
 
+# Names that must match the template. If the template renames something, update it here too.
 S3_USER="s3-user"
 EC2_USER_1="ec2-user-1"
 EC2_USER_2="ec2-user-2"
 OBSERVER_GROUP="onward-oncall-observers"
+# The AWS managed admin policy the tamper test attaches for a few seconds.
 ADMIN_POLICY_ARN="arn:aws:iam::aws:policy/AdministratorAccess"
 TRAIL_NAME="onward-iam-audit-trail"
 
 # ------------------------------- arguments -----------------------------------
+# Prints the usage text from the header comment at the top of this file, then exits.
 usage() { sed -n '2,/^# =====.*$/p' "$0" | sed -n '2,28p' | sed 's/^# \{0,1\}//'; exit 0; }
 
+# Reads the command-line options. A ":" after a letter means that option takes a value.
 while getopts "s:r:o:th" opt; do
   case "$opt" in
     s) STACK_NAME="$OPTARG" ;;
@@ -56,36 +66,46 @@ while getopts "s:r:o:th" opt; do
   esac
 done
 
+# Uses ./evidence-<timestamp> unless -o was given, creates it, and names the report file.
 OUT_DIR="${OUT_DIR:-./evidence-${TIMESTAMP}}"
 mkdir -p "$OUT_DIR"
 LOG="${OUT_DIR}/evidence-report.txt"
 
 # Tee to console (with colour) and to the report file (colour stripped).
+# From here on, everything the script prints also lands in evidence-report.txt.
 exec > >(tee >(sed -u 's/\x1b\[[0-9;]*m//g' >> "$LOG")) 2>&1
 
+# Adds --region to AWS commands only when a region was set.
 REGION_ARGS=()
 [[ -n "$REGION" ]] && REGION_ARGS=(--region "$REGION")
 
 # -------------------------------- helpers ------------------------------------
+# Uses colours only when printing to a terminal, so the saved report stays plain text.
 if [[ -t 1 ]]; then
   GREEN=$'\e[32m'; RED=$'\e[31m'; YELLOW=$'\e[33m'; BLUE=$'\e[34m'; BOLD=$'\e[1m'; RESET=$'\e[0m'
 else
   GREEN=""; RED=""; YELLOW=""; BLUE=""; BOLD=""; RESET=""
 fi
 
+# Counters for the summary at the end.
 PASS=0; FAIL=0; WARN=0
 SECTION_NO=0
 
+# Print helpers: a numbered section heading, and PASS / FAIL / WARN / INFO lines.
+# pass, fail and warn also add one to their counter.
 section() { SECTION_NO=$((SECTION_NO + 1)); printf '\n%s== %d. %s ==%s\n' "$BOLD$BLUE" "$SECTION_NO" "$1" "$RESET"; }
 pass()    { PASS=$((PASS + 1)); printf '  %s[PASS]%s %s\n' "$GREEN" "$RESET" "$1"; }
 fail()    { FAIL=$((FAIL + 1)); printf '  %s[FAIL]%s %s\n' "$RED" "$RESET" "$1"; }
 warn()    { WARN=$((WARN + 1)); printf '  %s[WARN]%s %s\n' "$YELLOW" "$RESET" "$1"; }
 info()    { printf '  %s[INFO]%s %s\n' "$BLUE" "$RESET" "$1"; }
 
+# Wrappers that run AWS commands quietly. aws_cmd adds the region; IAM needs no region.
 aws_cmd() { aws "$@" "${REGION_ARGS[@]}" 2>/dev/null; }
 aws_iam() { aws iam "$@" 2>/dev/null; }   # IAM is global
 
 # simulate <user> <action> -> prints evaluation decision
+# Asks the IAM policy simulator whether the user may run the action, without running it.
+# The simulator includes group policies, user policies and the permissions boundary.
 simulate() {
   aws_iam simulate-principal-policy \
     --policy-source-arn "arn:aws:iam::${ACCOUNT_ID}:user/$1" \
@@ -95,6 +115,8 @@ simulate() {
 }
 
 # expect <user> <allowed|denied> <action...>
+# Simulates each action and records PASS when the result matches what we expect.
+# "denied" covers both implicitDeny and explicitDeny; an empty answer counts as an error.
 expect() {
   local user="$1" want="$2"; shift 2
   local action decision
@@ -111,6 +133,8 @@ expect() {
   done
 }
 
+# Removes the temporary AdministratorAccess from the on-call group and user.
+# It does nothing unless the tamper test actually attached it.
 cleanup_tamper() {
   if [[ "${TAMPER_ACTIVE:-false}" == "true" ]]; then
     printf '\n%s[CLEANUP]%s Removing temporary AdministratorAccess attachments...\n' "$YELLOW" "$RESET"
@@ -120,15 +144,19 @@ cleanup_tamper() {
     printf '  Done.\n'
   fi
 }
+# Runs the cleanup whenever the script ends, even after an error or Ctrl+C, so admin is never left attached.
 trap cleanup_tamper EXIT INT TERM
 
 # ------------------------------- pre-flight ----------------------------------
+# Stops early if the AWS CLI is missing.
 command -v aws >/dev/null 2>&1 || { echo "aws CLI is required but not installed."; exit 2; }
 
+# Reads who is running the script and in which account. Fails if credentials are not working.
 ACCOUNT_ID="$(aws sts get-caller-identity --query Account --output text 2>/dev/null || true)"
 CALLER_ARN="$(aws sts get-caller-identity --query Arn --output text 2>/dev/null || true)"
 [[ -z "$ACCOUNT_ID" ]] && { echo "Unable to call AWS. Check your credentials."; exit 2; }
 
+# Report header: when, which account, who ran it, which stack and region.
 printf '%s================================================================%s\n' "$BOLD" "$RESET"
 printf '%s  ONWARD LOGISTICS - ACCESS CONTROL EVIDENCE REPORT%s\n' "$BOLD" "$RESET"
 printf '%s================================================================%s\n' "$BOLD" "$RESET"
@@ -143,6 +171,7 @@ printf '  Report          : %s\n' "$LOG"
 # =============================================================================
 section "Provisioning: CloudFormation stack and GitSync"
 # =============================================================================
+# Checks that the stack exists and finished successfully.
 STACK_STATUS="$(aws_cmd cloudformation describe-stacks --stack-name "$STACK_NAME" \
   --query 'Stacks[0].StackStatus' --output text)"
 
@@ -152,6 +181,7 @@ else
   fail "Stack '$STACK_NAME' not healthy or not found (status: ${STACK_STATUS:-not found})"
 fi
 
+# Saves the stack details and a table of every resource it created, as evidence files.
 aws_cmd cloudformation describe-stacks --stack-name "$STACK_NAME" \
   --query 'Stacks[0].{Id:StackId,Created:CreationTime,Updated:LastUpdatedTime,Tags:Tags}' \
   --output json > "${OUT_DIR}/stack-details.json"
@@ -161,6 +191,7 @@ aws_cmd cloudformation list-stack-resources --stack-name "$STACK_NAME" \
 info "Stack resource inventory saved to stack-resources.txt"
 
 # GitSync configuration (CodeConnections; falls back to the older CLI namespace)
+# Proves the stack is deployed from Git, and records the repo, branch and deployment file.
 SYNC_JSON=""
 for svc in codeconnections codestar-connections; do
   SYNC_JSON="$(aws "$svc" get-sync-configuration --sync-type CFN_STACK_SYNC \
@@ -168,6 +199,7 @@ for svc in codeconnections codestar-connections; do
 done
 if [[ -n "$SYNC_JSON" ]]; then
   echo "$SYNC_JSON" > "${OUT_DIR}/gitsync-configuration.json"
+  # Pulls three fields out of the JSON with sed, so jq is not required.
   REPO="$(echo "$SYNC_JSON" | sed -n 's/.*"RepositoryName": *"\([^"]*\)".*/\1/p' | head -1)"
   BRANCH="$(echo "$SYNC_JSON" | sed -n 's/.*"Branch": *"\([^"]*\)".*/\1/p' | head -1)"
   CONFIG_FILE="$(echo "$SYNC_JSON" | sed -n 's/.*"ConfigFile": *"\([^"]*\)".*/\1/p' | head -1)"
@@ -177,6 +209,7 @@ else
 fi
 
 # Drift detection: the live resources must still match the repository template.
+# Starts a drift check, then polls every 3 seconds (up to 30 times) until it finishes.
 DRIFT_ID="$(aws_cmd cloudformation detect-stack-drift --stack-name "$STACK_NAME" \
   --query StackDriftDetectionId --output text)"
 if [[ -n "$DRIFT_ID" ]]; then
@@ -188,6 +221,7 @@ if [[ -n "$DRIFT_ID" ]]; then
   done
   DRIFT_RESULT="$(aws_cmd cloudformation describe-stack-drift-detection-status \
     --stack-drift-detection-id "$DRIFT_ID" --query StackDriftStatus --output text)"
+  # IN_SYNC means nobody changed these resources in the console. Otherwise, save what drifted.
   if [[ "$DRIFT_RESULT" == "IN_SYNC" ]]; then
     pass "No configuration drift: live IAM matches the repository template"
   else
@@ -203,12 +237,14 @@ fi
 # =============================================================================
 section "Policy hygiene: no inline policies anywhere"
 # =============================================================================
+# 1) The stack must contain no AWS::IAM::Policy resources (that type creates inline policies).
 INLINE_RES="$(aws_cmd cloudformation list-stack-resources --stack-name "$STACK_NAME" \
   --query "length(StackResourceSummaries[?ResourceType=='AWS::IAM::Policy'])" --output text)"
 [[ "${INLINE_RES:-x}" == "0" ]] \
   && pass "Stack contains zero AWS::IAM::Policy (inline policy) resources" \
   || fail "Stack contains inline policy resources: ${INLINE_RES:-unknown}"
 
+# 2) Downloads the template AWS actually deployed and checks it has no "Policies:" property.
 TEMPLATE_BODY="$(aws_cmd cloudformation get-template --stack-name "$STACK_NAME" \
   --template-stage Original --query TemplateBody --output text)"
 echo "$TEMPLATE_BODY" > "${OUT_DIR}/deployed-template.yaml"
@@ -218,6 +254,7 @@ else
   pass "Deployed template has no inline 'Policies:' property"
 fi
 
+# 3) Asks IAM directly: each user and each group must have zero inline policies.
 for u in "$S3_USER" "$EC2_USER_1" "$EC2_USER_2"; do
   n="$(aws_iam list-user-policies --user-name "$u" --query 'length(PolicyNames)' --output text)"
   [[ "${n:-x}" == "0" ]] && pass "User $u has 0 inline policies" || fail "User $u has inline policies: ${n:-unknown}"
@@ -230,9 +267,12 @@ done
 # =============================================================================
 section "Identity design: groups, boundaries and tags"
 # =============================================================================
+# Lookup tables: the group and the boundary each user is expected to have.
 declare -A EXPECT_GROUP=( ["$S3_USER"]="onward-s3-engineers" ["$EC2_USER_1"]="onward-compute-engineers" ["$EC2_USER_2"]="$OBSERVER_GROUP" )
 declare -A EXPECT_BOUNDARY=( ["$S3_USER"]="onward-boundary-s3-engineer" ["$EC2_USER_1"]="onward-boundary-compute-engineer" ["$EC2_USER_2"]="onward-boundary-compute-observer" )
 
+# For each user, checks four things: correct group, correct boundary,
+# an ApprovedBy tag, and no policies attached directly to the user.
 for u in "$S3_USER" "$EC2_USER_1" "$EC2_USER_2"; do
   groups="$(aws_iam list-groups-for-user --user-name "$u" --query 'Groups[].GroupName' --output text)"
   [[ "$groups" == "${EXPECT_GROUP[$u]}" ]] \
@@ -255,6 +295,7 @@ for u in "$S3_USER" "$EC2_USER_1" "$EC2_USER_2"; do
     || warn "$u has $direct directly attached policies (expected 0)"
 done
 
+# Lists the managed policies on each group, and saves the on-call boundary JSON as evidence.
 for g in onward-s3-engineers onward-compute-engineers "$OBSERVER_GROUP"; do
   pols="$(aws_iam list-attached-group-policies --group-name "$g" --query 'AttachedPolicies[].PolicyName' --output text | tr '\t' ',')"
   info "Group $g -> managed policies: $pols"
@@ -268,12 +309,14 @@ info "On-call boundary document saved to observer-boundary-document.json"
 section "Secure first login: Secrets Manager and forced password change"
 # =============================================================================
 for u in "$S3_USER" "$EC2_USER_1" "$EC2_USER_2"; do
+  # The secret must exist. describe-secret reads only metadata, never the password.
   sid="onward/onboarding/$u"
   sname="$(aws_cmd secretsmanager describe-secret --secret-id "$sid" --query Name --output text)"
   [[ "$sname" == "$sid" ]] \
     && pass "Secret $sid exists in Secrets Manager (value not printed)" \
     || fail "Secret $sid not found"
 
+  # PASS if a reset is still required, or if the user already signed in and changed it.
   reset="$(aws_iam get-login-profile --user-name "$u" --query 'LoginProfile.PasswordResetRequired' --output text)"
   last="$(aws_iam get-user --user-name "$u" --query 'User.PasswordLastUsed' --output text)"
   if [[ "$reset" == "True" || "$reset" == "true" ]]; then
@@ -284,6 +327,7 @@ for u in "$S3_USER" "$EC2_USER_1" "$EC2_USER_2"; do
     fail "$u does not require a password reset and has no sign-in history"
   fi
 done
+# The deployed template must read passwords through dynamic references, not plain text.
 if grep -Eq 'resolve:secretsmanager' "${OUT_DIR}/deployed-template.yaml"; then
   pass "Template reads passwords via Secrets Manager dynamic references (no plain text)"
 else
@@ -293,6 +337,7 @@ fi
 # =============================================================================
 section "Day-one access: each engineer can do the job and nothing more"
 # =============================================================================
+# For each engineer: actions their job needs must be allowed, and actions outside it denied.
 info "Storage engineer ($S3_USER)"
 expect "$S3_USER" allowed  s3:ListAllMyBuckets s3:CreateBucket s3:PutObject s3:GetObject
 expect "$S3_USER" denied   ec2:RunInstances ec2:TerminateInstances iam:CreateUser
@@ -305,6 +350,7 @@ info "On-call engineer ($EC2_USER_2)"
 expect "$EC2_USER_2" allowed ec2:DescribeInstances ec2:DescribeInstanceStatus ec2:GetConsoleOutput
 expect "$EC2_USER_2" denied  ec2:RunInstances ec2:TerminateInstances ec2:StartInstances ec2:StopInstances s3:PutObject iam:CreateUser
 
+# Every user must be able to change their own password (needed for the forced reset).
 info "All users can change their own password"
 for u in "$S3_USER" "$EC2_USER_1" "$EC2_USER_2"; do expect "$u" allowed iam:ChangePassword; done
 
@@ -312,6 +358,7 @@ for u in "$S3_USER" "$EC2_USER_1" "$EC2_USER_2"; do expect "$u" allowed iam:Chan
 section "Guarantee: on-call engineer can never create or terminate compute"
 # =============================================================================
 if $TAMPER_TEST; then
+  # Simulates a careless change: attaches full admin to the on-call group AND user.
   info "TAMPER TEST: attaching AdministratorAccess to group $OBSERVER_GROUP and user $EC2_USER_2"
   TAMPER_ACTIVE=true
   aws iam attach-group-policy --group-name "$OBSERVER_GROUP" --policy-arn "$ADMIN_POLICY_ARN" >/dev/null 2>&1 \
@@ -320,20 +367,25 @@ if $TAMPER_TEST; then
   aws iam attach-user-policy --user-name "$EC2_USER_2" --policy-arn "$ADMIN_POLICY_ARN" >/dev/null 2>&1 \
     && pass "Attached AdministratorAccess directly to $EC2_USER_2 (simulated careless change)" \
     || fail "Could not attach AdministratorAccess to the user (check permissions)"
+  # IAM changes take a few seconds to apply everywhere.
   info "Waiting for IAM propagation..."
   sleep 10
 
+  # Even with admin attached, the boundary must still deny creating compute and anything
+  # outside its ceiling, while read-only access keeps working.
   info "Re-testing $EC2_USER_2 WITH full admin attached:"
   expect "$EC2_USER_2" denied ec2:RunInstances ec2:TerminateInstances ec2:CreateFleet ec2:RequestSpotInstances
   expect "$EC2_USER_2" denied iam:CreateUser s3:DeleteBucket
   expect "$EC2_USER_2" allowed ec2:DescribeInstances
 
+  # Removes the admin policy again and confirms the user is back to the template's state.
   cleanup_tamper
   info "Waiting for IAM propagation..."
   sleep 5
   expect "$EC2_USER_2" denied ec2:RunInstances ec2:TerminateInstances
   info "Permissions restored to the template-defined state."
 else
+  # Without -t, only checks the normal state and reminds you to run the tamper test.
   warn "Tamper test skipped. Re-run with -t to prove the guarantee after adding extra permissions."
   expect "$EC2_USER_2" denied ec2:RunInstances ec2:TerminateInstances ec2:CreateFleet ec2:RequestSpotInstances
 fi
@@ -341,6 +393,7 @@ fi
 # =============================================================================
 section "Auditability: who changed access, and when"
 # =============================================================================
+# Checks that our trail exists and is recording right now.
 TRAIL_JSON="$(aws_cmd cloudtrail describe-trails --trail-name-list "$TRAIL_NAME" --query 'trailList[0].Name' --output text)"
 if [[ "$TRAIL_JSON" == "$TRAIL_NAME" ]]; then
   LOGGING="$(aws_cmd cloudtrail get-trail-status --name "$TRAIL_NAME" --query IsLogging --output text)"
@@ -350,6 +403,7 @@ else
 fi
 
 # IAM is a global service: its events are recorded in us-east-1.
+# Looks up the last 10 events of each IAM change type and saves time, event and actor.
 AUDIT_FILE="${OUT_DIR}/cloudtrail-iam-events.txt"
 : > "$AUDIT_FILE"
 for ev in CreateUser CreateLoginProfile AddUserToGroup AttachGroupPolicy DetachGroupPolicy AttachUserPolicy DetachUserPolicy PutUserPermissionsBoundary CreatePolicy; do
@@ -358,6 +412,7 @@ for ev in CreateUser CreateLoginProfile AddUserToGroup AttachGroupPolicy DetachG
     --query 'Events[].[EventTime,EventName,Username]' --output text 2>/dev/null)"
   [[ -n "$rows" ]] && echo "$rows" >> "$AUDIT_FILE"
 done
+# Sorts newest first and prints the 15 most recent events in the report.
 sort -r "$AUDIT_FILE" -o "$AUDIT_FILE"
 if [[ -s "$AUDIT_FILE" ]]; then
   pass "CloudTrail returned $(wc -l < "$AUDIT_FILE" | tr -d ' ') IAM change events (time | event | actor)"
@@ -366,16 +421,19 @@ else
   fail "No IAM change events found in CloudTrail event history"
 fi
 
+# Shows who most recently attached a policy to a group (after -t, that is the tamper test).
 LAST_TAMPER="$(aws cloudtrail lookup-events --region us-east-1 \
   --lookup-attributes AttributeKey=EventName,AttributeValue=AttachGroupPolicy --max-results 1 \
   --query 'Events[0].Username' --output text 2>/dev/null)"
 [[ -n "$LAST_TAMPER" && "$LAST_TAMPER" != "None" ]] && info "Most recent AttachGroupPolicy was performed by: $LAST_TAMPER"
 
+# Reminds the reader that the code history (who changed the template) is in Git.
 info "Template change history lives in Git:  git log --follow -- templates/onboarding-template.yaml"
 
 # =============================================================================
 # Summary
 # =============================================================================
+# Prints the totals. Exit code 0 means every check passed; 1 means at least one failed.
 TOTAL=$((PASS + FAIL))
 printf '\n%s================================================================%s\n' "$BOLD" "$RESET"
 printf '%s  SUMMARY%s\n' "$BOLD" "$RESET"

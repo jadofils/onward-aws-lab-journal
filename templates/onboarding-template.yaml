@@ -1,4 +1,13 @@
+# =============================================================================
+# onboarding-template.yaml - Onward Logistics secure onboarding
+# Creates three engineers with least-privilege access, a permissions boundary
+# per role, generated first passwords and a CloudTrail audit trail.
+# GitSync deploys this file whenever main changes (see deployment.yaml).
+# =============================================================================
+
+# Version of the CloudFormation template language. "2010-09-09" is the only valid value.
 AWSTemplateFormatVersion: "2010-09-09"
+# Text shown on the stack in the console. The ">" folds these lines into one paragraph.
 Description: >
   Onward Logistics - automated, auditable, least-privilege onboarding.
   Three engineers (s3-user, ec2-user-1, ec2-user-2), group-based access using
@@ -7,21 +16,32 @@ Description: >
   with forced reset, and a CloudTrail audit trail.
   Deploy with CAPABILITY_NAMED_IAM.
 
+# -----------------------------------------------------------------------------
+# PARAMETERS - values chosen at deploy time (set in deployment.yaml), so the
+# same template can be reused without editing the code.
+# -----------------------------------------------------------------------------
 Parameters:
+  # Value of the Project tag on resources, so they can be found and costed together.
   ProjectTag:
     Type: String
     Default: onward-logistics-onboarding
+  # Who approved this access. Saved as a tag on every user for the audit trail.
   ApprovedBy:
     Type: String
     Default: head-of-security
     Description: Recorded as a tag on every identity for audit purposes.
+  # Switch to turn the CloudTrail trail on or off. Only "true" or "false" is accepted.
   EnableAuditTrail:
     Type: String
     Default: "true"
     AllowedValues: ["true", "false"]
     Description: Set to false if your account already has an organisation/all-region trail.
 
+# -----------------------------------------------------------------------------
+# CONDITIONS - true/false rules that decide whether some resources are created.
+# -----------------------------------------------------------------------------
 Conditions:
+  # True when EnableAuditTrail is "true". The bucket, bucket policy and trail are created only then.
   CreateTrail: !Equals [!Ref EnableAuditTrail, "true"]
 
 Resources:
@@ -31,18 +51,26 @@ Resources:
   # Even if someone later attaches AdministratorAccess to the user or group,
   # nothing outside the boundary is granted.
   # ---------------------------------------------------------------------------
+
+  # Ceiling for the storage engineer (s3-user). It grants nothing by itself;
+  # it only limits the user to S3 and changing their own password.
   S3EngineerBoundary:
+    # A customer managed policy: a standalone, reusable policy (not inline).
     Type: AWS::IAM::ManagedPolicy
     Properties:
+      # Fixed name, so the evidence script and other tools can find it.
       ManagedPolicyName: onward-boundary-s3-engineer
       Description: Ceiling for storage engineers - S3 plus self-service password change only.
       PolicyDocument:
+        # Version of the IAM policy language. Always "2012-10-17".
         Version: "2012-10-17"
         Statement:
+          # S3 actions may pass through the ceiling. The group policy still has to grant them.
           - Sid: S3Only
             Effect: Allow
             Action: "s3:*"
             Resource: "*"
+          # Lets the user set a new password at first sign-in and read the password rules.
           - Sid: SelfServicePasswordChange
             Effect: Allow
             Action:
@@ -50,6 +78,8 @@ Resources:
               - iam:GetAccountPasswordPolicy
             Resource: "*"
 
+  # Ceiling for the compute engineer (ec2-user-1): EC2, read-only CloudWatch
+  # metrics and password change. Every other service is outside the ceiling.
   ComputeEngineerBoundary:
     Type: AWS::IAM::ManagedPolicy
     Properties:
@@ -58,6 +88,7 @@ Resources:
       PolicyDocument:
         Version: "2012-10-17"
         Statement:
+          # All EC2 actions, plus read-only CloudWatch (Describe, Get, List) to watch instances.
           - Sid: Ec2AndMonitoring
             Effect: Allow
             Action:
@@ -66,6 +97,7 @@ Resources:
               - cloudwatch:Get*
               - cloudwatch:List*
             Resource: "*"
+          # Same self-service password change as the other roles.
           - Sid: SelfServicePasswordChange
             Effect: Allow
             Action:
@@ -73,6 +105,8 @@ Resources:
               - iam:GetAccountPasswordPolicy
             Resource: "*"
 
+  # Ceiling for the on-call engineer (ec2-user-2). This is the client's main
+  # guarantee: they can look at compute but can never create or terminate it.
   ObserverBoundary:
     Type: AWS::IAM::ManagedPolicy
     Properties:
@@ -81,6 +115,7 @@ Resources:
       PolicyDocument:
         Version: "2012-10-17"
         Statement:
+          # Read-only actions: list and describe instances, read console output and metrics.
           - Sid: ObserveOnly
             Effect: Allow
             Action:
@@ -97,6 +132,8 @@ Resources:
               - iam:GetAccountPasswordPolicy
             Resource: "*"
           # Belt and braces: an explicit Deny always wins over any Allow.
+          # Blocks every common way to start or stop compute: EC2, Spot, Fleet,
+          # launch templates, Auto Scaling, Lambda and ECS.
           - Sid: NeverCreateOrTerminateCompute
             Effect: Deny
             Action:
@@ -116,6 +153,7 @@ Resources:
               - ecs:CreateService
             Resource: "*"
           # Stop the user from removing their own ceiling.
+          # Denies removing or replacing the boundary and editing or deleting policy versions.
           - Sid: ProtectTheBoundary
             Effect: Deny
             Action:
@@ -131,14 +169,18 @@ Resources:
   # GROUPS - permissions come from AWS managed policies (no inline policies,
   # no custom per-user policies to maintain)
   # ---------------------------------------------------------------------------
+
+  # Group for storage engineers. Members get full S3 access and can change their password.
   S3EngineersGroup:
     Type: AWS::IAM::Group
     Properties:
       GroupName: onward-s3-engineers
+      # ARNs of AWS managed policies attached to the group. AWS writes and maintains them.
       ManagedPolicyArns:
         - arn:aws:iam::aws:policy/AmazonS3FullAccess
         - arn:aws:iam::aws:policy/IAMUserChangePassword
 
+  # Group for compute engineers. Members get full EC2 access; the boundary blocks other services.
   ComputeEngineersGroup:
     Type: AWS::IAM::Group
     Properties:
@@ -147,6 +189,8 @@ Resources:
         - arn:aws:iam::aws:policy/AmazonEC2FullAccess
         - arn:aws:iam::aws:policy/IAMUserChangePassword
 
+  # Group for on-call engineers. Members get read-only EC2 access.
+  # Even if this group is later widened, the observer boundary still blocks creating compute.
   OnCallObserversGroup:
     Type: AWS::IAM::Group
     Properties:
@@ -158,21 +202,30 @@ Resources:
   # ---------------------------------------------------------------------------
   # SECRETS - generated initial passwords (never appear in the template)
   # ---------------------------------------------------------------------------
+
+  # First password for s3-user. Secrets Manager generates it, so no person or
+  # file ever holds it in plain text.
   S3UserSecret:
     Type: AWS::SecretsManager::Secret
     Properties:
+      # Secret name. The evidence script and admins look it up by this path.
       Name: onward/onboarding/s3-user
       Description: Initial console password for s3-user (must be changed at first sign-in)
       GenerateSecretString:
+        # Starting JSON. The generated password is added to it under GenerateStringKey.
         SecretStringTemplate: '{"username":"s3-user"}'
+        # The secret ends up as {"username":"s3-user","password":"<generated>"}.
         GenerateStringKey: password
+        # 24 characters with at least one uppercase, lowercase, number and symbol.
         PasswordLength: 24
         RequireEachIncludedType: true
+        # Leaves out characters that break JSON, URLs or the console sign-in form.
         ExcludeCharacters: '"@/\'
       Tags:
         - Key: Project
           Value: !Ref ProjectTag
 
+  # First password for ec2-user-1. Same settings as above.
   Ec2User1Secret:
     Type: AWS::SecretsManager::Secret
     Properties:
@@ -188,6 +241,7 @@ Resources:
         - Key: Project
           Value: !Ref ProjectTag
 
+  # First password for ec2-user-2. Same settings as above.
   Ec2User2Secret:
     Type: AWS::SecretsManager::Secret
     Properties:
@@ -206,20 +260,31 @@ Resources:
   # ---------------------------------------------------------------------------
   # USERS - group membership + permissions boundary + forced password reset
   # ---------------------------------------------------------------------------
+
+  # The storage engineer. Access comes from the group and is capped by the boundary.
   S3User:
     Type: AWS::IAM::User
     Properties:
+      # Fixed sign-in name for the console.
       UserName: s3-user
+      # Joins the S3 engineers group. This is where the user's permissions come from.
       Groups: [!Ref S3EngineersGroup]
+      # Sets the ceiling. !Ref of a managed policy returns its ARN.
       PermissionsBoundary: !Ref S3EngineerBoundary
+      # Console sign-in settings.
       LoginProfile:
+        # Dynamic reference: CloudFormation reads the generated password at deploy time,
+        # so it never appears in this file, in Git or in the stack outputs.
         Password: !Sub "{{resolve:secretsmanager:${S3UserSecret}:SecretString:password}}"
+        # Forces the engineer to choose their own password at first sign-in.
         PasswordResetRequired: true
+      # Audit labels: the job role, who approved the access, and the project.
       Tags:
         - { Key: Role, Value: storage-engineer }
         - { Key: ApprovedBy, Value: !Ref ApprovedBy }
         - { Key: Project, Value: !Ref ProjectTag }
 
+  # The compute engineer. Same pattern: compute group, compute boundary, own secret.
   Ec2User1:
     Type: AWS::IAM::User
     Properties:
@@ -234,6 +299,8 @@ Resources:
         - { Key: ApprovedBy, Value: !Ref ApprovedBy }
         - { Key: Project, Value: !Ref ProjectTag }
 
+  # The on-call engineer. Read-only group plus the observer boundary that
+  # denies creating or terminating compute.
   Ec2User2:
     Type: AWS::IAM::User
     Properties:
@@ -251,24 +318,33 @@ Resources:
   # ---------------------------------------------------------------------------
   # AUDIT - CloudTrail records every IAM change (who, what, when)
   # ---------------------------------------------------------------------------
+
+  # Private S3 bucket that stores the CloudTrail log files.
   AuditLogBucket:
     Type: AWS::S3::Bucket
+    # Created only when EnableAuditTrail is "true".
     Condition: CreateTrail
+    # Keeps the bucket and its logs even if the stack is deleted or the bucket replaced,
+    # so audit evidence is never lost.
     DeletionPolicy: Retain
     UpdateReplacePolicy: Retain
     Properties:
+      # Encrypts every log file at rest with S3-managed keys (AES-256).
       BucketEncryption:
         ServerSideEncryptionConfiguration:
           - ServerSideEncryptionByDefault:
               SSEAlgorithm: AES256
+      # Turns on all four public-access blocks, so the logs can never be made public.
       PublicAccessBlockConfiguration:
         BlockPublicAcls: true
         BlockPublicPolicy: true
         IgnorePublicAcls: true
         RestrictPublicBuckets: true
+      # Keeps every version of a file, so a deleted or overwritten log can be recovered.
       VersioningConfiguration:
         Status: Enabled
 
+  # Resource policy on the bucket. It lets the CloudTrail service, and nothing else, write logs.
   AuditLogBucketPolicy:
     Type: AWS::S3::BucketPolicy
     Condition: CreateTrail
@@ -277,33 +353,47 @@ Resources:
       PolicyDocument:
         Version: "2012-10-17"
         Statement:
+          # CloudTrail checks the bucket's permissions before it starts writing.
           - Sid: CloudTrailAclCheck
             Effect: Allow
             Principal: { Service: cloudtrail.amazonaws.com }
             Action: s3:GetBucketAcl
             Resource: !GetAtt AuditLogBucket.Arn
+          # CloudTrail may write log files, but only under this account's AWSLogs folder.
           - Sid: CloudTrailWrite
             Effect: Allow
             Principal: { Service: cloudtrail.amazonaws.com }
             Action: s3:PutObject
             Resource: !Sub "${AuditLogBucket.Arn}/AWSLogs/${AWS::AccountId}/*"
+            # Each file must give the bucket owner full control, so CloudTrail can't lock us out.
             Condition:
               StringEquals:
                 s3:x-amz-acl: bucket-owner-full-control
 
+  # The trail. It records every API call (who did what, and when) and writes it to the bucket.
   AuditTrail:
     Type: AWS::CloudTrail::Trail
     Condition: CreateTrail
+    # Waits for the bucket policy; otherwise CloudTrail can't write and creation fails.
     DependsOn: AuditLogBucketPolicy
     Properties:
       TrailName: onward-iam-audit-trail
       S3BucketName: !Ref AuditLogBucket
+      # Starts recording as soon as the trail is created.
       IsLogging: true
+      # Records events from every region, not only the one the stack is in.
       IsMultiRegionTrail: true
+      # Includes global services like IAM, which is where access changes happen.
       IncludeGlobalServiceEvents: true
+      # Adds digest files that prove the logs were not edited or deleted.
       EnableLogFileValidation: true
 
+# -----------------------------------------------------------------------------
+# OUTPUTS - values shown on the stack's Outputs tab after deployment.
+# They hold ARNs and names only, never password values.
+# -----------------------------------------------------------------------------
 Outputs:
+  # ARN of each user's secret, so an admin knows where to read the first password.
   S3UserSecretArn:
     Description: Retrieve the initial password for s3-user
     Value: !Ref S3UserSecret
@@ -313,9 +403,11 @@ Outputs:
   Ec2User2SecretArn:
     Description: Retrieve the initial password for ec2-user-2
     Value: !Ref Ec2User2Secret
+  # ARN of the on-call boundary, handy as evidence in the review.
   ObserverBoundaryArn:
     Description: Permissions boundary that guarantees ec2-user-2 can never create/terminate compute
     Value: !Ref ObserverBoundary
+  # Name of the audit bucket. Shown only when the trail was created.
   AuditBucketName:
     Condition: CreateTrail
     Value: !Ref AuditLogBucket

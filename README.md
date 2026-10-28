@@ -7,7 +7,7 @@ Weekly AWS labs for Onward Logistics, each built as infrastructure as code with 
 | Week | Module | Lab | Folder | Status |
 |:---:|--------|-----|--------|--------|
 | 1 | Security & Identity Management on AWS | Secure Onboarding at Scale | [week-1-secure-onboarding/](week-1-secure-onboarding/) | Deployed |
-| 2 | Network & Security on AWS | Designing a Secure Network for the Order System | [week-2-secure-network/](week-2-secure-network/) | Discovery report drafted |
+| 2 | Network & Security on AWS | Designing a Secure Network for the Order System | [own repository](https://github.com/jadofils/onward-aws-lab-journal-logistics-week-2-network-design-lab) | Deployed |
 
 ## Repository Structure
 
@@ -24,19 +24,16 @@ Weekly AWS labs for Onward Logistics, each built as infrastructure as code with 
 │   ├── templates/                         # CloudFormation template
 │   └── scripts/                           # Deploy-role bootstrap and evidence script
 └── week-2-secure-network/
-    ├── README.md                          # Week 2 overview and plan
-    ├── docs/                              # Lab brief, discovery report
-    ├── templates/                         # CloudFormation templates (to be added)
-    └── scripts/                           # Helper and evidence scripts (to be added)
+    └── README.md                          # Pointer: Week 2 moved to its own repository
 ```
 
 ## Conventions
 
-- **One folder per week.** Each folder is named `week-<n>-<topic>` and holds everything for that lab: `docs/`, `templates/`, `scripts/` and a `README.md`.
+- **One folder per week** (Week 1 here; later weeks in their own repositories). Each folder is named `week-<n>-<topic>` and holds everything for that lab: `docs/`, `templates/`, `scripts/` and a `README.md`.
 - **One GitSync stack per week.** Each week deploys its own stack from its own deployment file, so labs never change each other's resources.
 - **Deployment files.**
   - Week 1's `deployment.yaml` stays at the repository root, because its live GitSync stack was set up with that path. It points to `week-1-secure-onboarding/templates/onboarding-template.yaml`.
-  - From Week 2 on, each week keeps its deployment file inside its own folder (for example `week-2-secure-network/deployment.yaml`), and its GitSync stack is set up with that path.
+  - From Week 2 on, each week has its own repository with its deployment file at that repository's root (Week 2: [onward-aws-lab-journal-logistics-week-2-network-design-lab](https://github.com/jadofils/onward-aws-lab-journal-logistics-week-2-network-design-lab), file `network-template-deployment.yaml`).
 - **Workflow.** Changes go through a branch and a pull request, and `main` is what GitSync deploys.
 
 ## Adding a new week

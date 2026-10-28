@@ -528,7 +528,7 @@ LAST_TAMPER="$(aws cloudtrail lookup-events --region us-east-1 \
 # Reminds the reader that the code history (who changed the template) is in Git.
 # Means: print the git command that shows the template's change history.
 # AWS uses: nothing.
-info "Template change history lives in Git:  git log --follow -- templates/onboarding-template.yaml"
+info "Template change history lives in Git:  git log --follow -- week-1-secure-onboarding/templates/onboarding-template.yaml"
 
 # =============================================================================
 # Summary

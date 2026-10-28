@@ -1,5 +1,5 @@
 # ---------------------------------------------------------------------------
-# deployment.yaml - CloudFormation GitSync deployment file
+# deployment.yaml - CloudFormation GitSync deployment file (Week 1)
 # Project : Onward Logistics - Secure Onboarding at Scale
 #
 # This file tells CloudFormation GitSync which template to deploy and with
@@ -17,8 +17,8 @@
 # Path of the CloudFormation template, relative to the repository root.
 # This file must stay at the root; the template can live in a folder.
 # Means: which template file GitSync should deploy.
-# AWS uses: GitSync reads templates/onboarding-template.yaml from the repo and deploys it as the stack.
-template-file-path: templates/onboarding-template.yaml
+# AWS uses: GitSync reads week-1-secure-onboarding/templates/onboarding-template.yaml from the repo and deploys it as the stack.
+template-file-path: week-1-secure-onboarding/templates/onboarding-template.yaml
 
 # Values passed to the template's Parameters section on every deploy.
 # Means: input values for the template; each name must match a parameter in the template.

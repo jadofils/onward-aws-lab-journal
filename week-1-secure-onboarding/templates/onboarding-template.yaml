@@ -247,55 +247,55 @@ Resources:
   # Group for storage engineers. Members get full S3 access and can change their password.
   # Means: logical ID of the storage engineers' group.
   # AWS uses: an IAM group named onward-s3-engineers.
-  S3EngineersGroup:
-    # Means: create an IAM group.
-    # AWS uses: AWS::IAM::Group
-    Type: AWS::IAM::Group
-    Properties:
-      # Means: the real group name in IAM.
-      # AWS uses: onward-s3-engineers
-      GroupName: onward-s3-engineers
-      # ARNs of AWS managed policies attached to the group. AWS writes and maintains them.
-      # Means: the policies attached to the group; these GRANT the permissions.
-      # AWS uses: AmazonS3FullAccess and IAMUserChangePassword (the "aws" in the ARN marks AWS managed).
-      ManagedPolicyArns:
-        - arn:aws:iam::aws:policy/AmazonS3FullAccess
-        - arn:aws:iam::aws:policy/IAMUserChangePassword
+  # S3EngineersGroup:
+  #   # Means: create an IAM group.
+  #   # AWS uses: AWS::IAM::Group
+  #   Type: AWS::IAM::Group
+  #   Properties:
+  #     # Means: the real group name in IAM.
+  #     # AWS uses: onward-s3-engineers
+  #     GroupName: onward-s3-engineers
+  #     # ARNs of AWS managed policies attached to the group. AWS writes and maintains them.
+  #     # Means: the policies attached to the group; these GRANT the permissions.
+  #     # AWS uses: AmazonS3FullAccess and IAMUserChangePassword (the "aws" in the ARN marks AWS managed).
+  #     ManagedPolicyArns:
+  #       - arn:aws:iam::aws:policy/AmazonS3FullAccess
+  #       - arn:aws:iam::aws:policy/IAMUserChangePassword
 
-  # Group for compute engineers. Members get full EC2 access; the boundary blocks other services.
-  # Means: logical ID of the compute engineers' group.
-  # AWS uses: an IAM group named onward-compute-engineers.
-  ComputeEngineersGroup:
-    # Means: create an IAM group.
-    # AWS uses: AWS::IAM::Group
-    Type: AWS::IAM::Group
-    Properties:
-      # Means: the real group name.
-      # AWS uses: onward-compute-engineers
-      GroupName: onward-compute-engineers
-      # Means: policies that grant this group's permissions.
-      # AWS uses: AmazonEC2FullAccess and IAMUserChangePassword.
-      ManagedPolicyArns:
-        - arn:aws:iam::aws:policy/AmazonEC2FullAccess
-        - arn:aws:iam::aws:policy/IAMUserChangePassword
+  # # Group for compute engineers. Members get full EC2 access; the boundary blocks other services.
+  # # Means: logical ID of the compute engineers' group.
+  # # AWS uses: an IAM group named onward-compute-engineers.
+  # ComputeEngineersGroup:
+  #   # Means: create an IAM group.
+  #   # AWS uses: AWS::IAM::Group
+  #   Type: AWS::IAM::Group
+  #   Properties:
+  #     # Means: the real group name.
+  #     # AWS uses: onward-compute-engineers
+  #     GroupName: onward-compute-engineers
+  #     # Means: policies that grant this group's permissions.
+  #     # AWS uses: AmazonEC2FullAccess and IAMUserChangePassword.
+  #     ManagedPolicyArns:
+  #       - arn:aws:iam::aws:policy/AmazonEC2FullAccess
+  #       - arn:aws:iam::aws:policy/IAMUserChangePassword
 
-  # Group for on-call engineers. Members get read-only EC2 access.
-  # Even if this group is later widened, the observer boundary still blocks creating compute.
-  # Means: logical ID of the on-call group.
-  # AWS uses: an IAM group named onward-oncall-observers.
-  OnCallObserversGroup:
-    # Means: create an IAM group.
-    # AWS uses: AWS::IAM::Group
-    Type: AWS::IAM::Group
-    Properties:
-      # Means: the real group name.
-      # AWS uses: onward-oncall-observers
-      GroupName: onward-oncall-observers
-      # Means: policies that grant this group's permissions.
-      # AWS uses: AmazonEC2ReadOnlyAccess and IAMUserChangePassword.
-      ManagedPolicyArns:
-        - arn:aws:iam::aws:policy/AmazonEC2ReadOnlyAccess
-        - arn:aws:iam::aws:policy/IAMUserChangePassword
+  # # Group for on-call engineers. Members get read-only EC2 access.
+  # # Even if this group is later widened, the observer boundary still blocks creating compute.
+  # # Means: logical ID of the on-call group.
+  # # AWS uses: an IAM group named onward-oncall-observers.
+  # OnCallObserversGroup:
+  #   # Means: create an IAM group.
+  #   # AWS uses: AWS::IAM::Group
+  #   Type: AWS::IAM::Group
+  #   Properties:
+  #     # Means: the real group name.
+  #     # AWS uses: onward-oncall-observers
+  #     GroupName: onward-oncall-observers
+  #     # Means: policies that grant this group's permissions.
+  #     # AWS uses: AmazonEC2ReadOnlyAccess and IAMUserChangePassword.
+  #     ManagedPolicyArns:
+  #       - arn:aws:iam::aws:policy/AmazonEC2ReadOnlyAccess
+  #       - arn:aws:iam::aws:policy/IAMUserChangePassword
 
   # ---------------------------------------------------------------------------
   # SECRETS - generated initial passwords (never appear in the template)

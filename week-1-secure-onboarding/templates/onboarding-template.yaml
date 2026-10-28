@@ -418,7 +418,7 @@ Resources:
       # Joins the S3 engineers group. This is where the user's permissions come from.
       # Means: the list of groups the user belongs to ([ ] is a one-item list).
       # AWS uses: [onward-s3-engineers] (!Ref of a group returns its name).
-      Groups: [!Ref S3EngineersGroup]
+      # Groups: [!Ref S3EngineersGroup]
       # Sets the ceiling. !Ref of a managed policy returns its ARN.
       # Means: the user's permissions boundary (maximum allowed access).
       # AWS uses: arn:aws:iam::<account-id>:policy/onward-boundary-s3-engineer
@@ -457,7 +457,7 @@ Resources:
       UserName: ec2-user-1
       # Means: group membership.
       # AWS uses: [onward-compute-engineers]
-      Groups: [!Ref ComputeEngineersGroup]
+      # Groups: [!Ref ComputeEngineersGroup]
       # Means: the user's ceiling.
       # AWS uses: arn:aws:iam::<account-id>:policy/onward-boundary-compute-engineer
       PermissionsBoundary: !Ref ComputeEngineerBoundary
@@ -491,7 +491,7 @@ Resources:
       UserName: ec2-user-2
       # Means: group membership.
       # AWS uses: [onward-oncall-observers]
-      Groups: [!Ref OnCallObserversGroup]
+      # Groups: [!Ref OnCallObserversGroup]
       # Means: the user's ceiling, the one with the Deny on creating compute.
       # AWS uses: arn:aws:iam::<account-id>:policy/onward-boundary-compute-observer
       PermissionsBoundary: !Ref ObserverBoundary

@@ -7,7 +7,7 @@ Weekly AWS labs for Onward Logistics, each built as infrastructure as code with 
 | Week | Module | Lab | Folder | Status |
 |:---:|--------|-----|--------|--------|
 | 1 | Security & Identity Management on AWS | Secure Onboarding at Scale | [week-1-secure-onboarding/](week-1-secure-onboarding/) | Deployed |
-| 2 | Network & Security on AWS | Designing a Secure Network for the Order System | [week-2-secure-network/](week-2-secure-network/) | Discovery |
+| 2 | Network & Security on AWS | Designing a Secure Network for the Order System | [week-2-secure-network/](week-2-secure-network/) | Discovery report drafted |
 
 ## Repository Structure
 
@@ -15,6 +15,9 @@ Weekly AWS labs for Onward Logistics, each built as infrastructure as code with 
 .
 ├── README.md                              # This index
 ├── deployment.yaml                        # Week 1 GitSync deployment file (stays at the root, see below)
+├── docs/                                  # Shared across weeks
+│   ├── client-profile.md                  # Onward Logistics profile, company standards, requirements by week
+│   └── discovery-report-template.md       # Template for each week's discovery report
 ├── week-1-secure-onboarding/
 │   ├── README.md                          # Week 1 overview, architecture, deployment, evidence
 │   ├── docs/                              # Lab brief, draw.io diagrams, PNG exports
@@ -39,7 +42,7 @@ Weekly AWS labs for Onward Logistics, each built as infrastructure as code with 
 ## Adding a new week
 
 1. Create `week-<n>-<topic>/` with `docs/`, `templates/`, `scripts/` and a `README.md`.
-2. Save the lab brief as `docs/lab-brief.md`, then write and commit `docs/discovery.md` before building.
+2. Save the lab brief as `docs/lab-brief.md`, then write and commit `docs/discovery.md` from the [discovery report template](docs/discovery-report-template.md) before building. Follow the standards in the [Client Profile](docs/client-profile.md).
 3. Add the template and a `deployment.yaml` inside the week's folder.
 4. Create the GitSync stack with the deployment file path set to `week-<n>-<topic>/deployment.yaml`.
 5. Add the week to the **Labs** table above.

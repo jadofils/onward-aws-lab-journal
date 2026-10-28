@@ -5,6 +5,7 @@ The lab brief and the diagrams for Week 1.
 | File | What it is |
 |------|------------|
 | [lab-brief.md](lab-brief.md) | The lab brief: business scenario, client requirements, technical rules, deliverables and rubric |
+| [Discovery Report.docx](Discovery%20Report.docx) | Discovery report in the course Word template (completed after the Week 1 build) |
 | [architecture.drawio](architecture.drawio) | Editable draw.io file with 4 pages (open in VS Code with the Draw.io Integration extension) |
 | [images/01-architecture.png](images/01-architecture.png) | Page 1: solution architecture |
 | [images/02-access-change-flow.png](images/02-access-change-flow.png) | Page 2: how an access change flows from branch to audit record |

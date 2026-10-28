@@ -3,3 +3,4 @@ evidence-*/
 *.pem
 .claude/
 pr-descriptions/
+~$*

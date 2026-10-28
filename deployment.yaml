@@ -16,21 +16,41 @@
 
 # Path of the CloudFormation template, relative to the repository root.
 # This file must stay at the root; the template can live in a folder.
+# Means: which template file GitSync should deploy.
+# AWS uses: GitSync reads templates/onboarding-template.yaml from the repo and deploys it as the stack.
 template-file-path: templates/onboarding-template.yaml
 
 # Values passed to the template's Parameters section on every deploy.
+# Means: input values for the template; each name must match a parameter in the template.
+# AWS uses: these values instead of the template's Default values.
 parameters:
   # Becomes the Project tag on resources in the template.
+  # Means: sets the template's ProjectTag parameter.
+  # AWS uses: ProjectTag = onward-logistics-onboarding
   ProjectTag: onward-logistics-onboarding
   # Recorded as the ApprovedBy tag on every user. Change it when a different person approves.
+  # Means: sets the template's ApprovedBy parameter.
+  # AWS uses: ApprovedBy = head-of-security, written as a tag on each IAM user.
   ApprovedBy: head-of-security
   # Set to "false" if the account already has an all-region trail.
+  # Means: sets the template's EnableAuditTrail switch.
+  # AWS uses: "true", so the CreateTrail condition is true and the bucket and trail are created.
   EnableAuditTrail: "true"
 
 # Stack-level tags. CloudFormation copies them onto every resource that supports tags,
 # so anyone can see who owns the resources and how they are managed.
+# Means: key/value labels for the whole stack.
+# AWS uses: these 4 tags on the stack and on every resource that supports tags.
 tags:
+  # Means: which project the resources belong to.
+  # AWS uses: Project = onward-logistics-onboarding
   Project: onward-logistics-onboarding
+  # Means: which team owns the resources.
+  # AWS uses: Owner = platform-security
   Owner: platform-security
+  # Means: how the resources are managed, so nobody edits them by hand in the console.
+  # AWS uses: ManagedBy = cloudformation-gitsync
   ManagedBy: cloudformation-gitsync
+  # Means: which budget the cost is charged to.
+  # AWS uses: CostCenter = engineering (visible in billing reports when activated as a cost allocation tag)
   CostCenter: engineering

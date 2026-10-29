@@ -447,35 +447,35 @@ Resources:
   # The compute engineer. Same pattern: compute group, compute boundary, own secret.
   # Means: logical ID of the compute engineer's user.
   # AWS uses: an IAM user named ec2-user-1.
-  # Ec2User1:
-  #   # Means: create an IAM user.
-  #   # AWS uses: AWS::IAM::User
-  #   Type: AWS::IAM::User
-  #   Properties:
-  #     # Means: the real user name.
-  #     # AWS uses: ec2-user-1
-  #     UserName: ec2-user-1
-  #     # Means: group membership.
-  #     # AWS uses: [onward-compute-engineers]
-  #     Groups: [!Ref ComputeEngineersGroup]
-  #     # Means: the user's ceiling.
-  #     # AWS uses: arn:aws:iam::<account-id>:policy/onward-boundary-compute-engineer
-  #     PermissionsBoundary: !Ref ComputeEngineerBoundary
-  #     # Means: console password settings.
-  #     # AWS uses: the two values below.
-  #     LoginProfile:
-  #       # Means: read the generated password from Ec2User1Secret.
-  #       # AWS uses: the real password from onward/onboarding/ec2-user-1.
-  #       Password: !Sub "{{resolve:secretsmanager:${Ec2User1Secret}:SecretString:password}}"
-  #       # Means: force a new password at first sign-in.
-  #       # AWS uses: true
-  #       PasswordResetRequired: true
-  #     # Means: audit labels.
-  #     # AWS uses: Role = compute-engineer, ApprovedBy and Project from the parameters.
-  #     Tags:
-  #       - { Key: Role, Value: compute-engineer }
-  #       - { Key: ApprovedBy, Value: !Ref ApprovedBy }
-  #       - { Key: Project, Value: !Ref ProjectTag }
+  Ec2User1:
+    # Means: create an IAM user.
+    # AWS uses: AWS::IAM::User
+    Type: AWS::IAM::User
+    Properties:
+      # Means: the real user name.
+      # AWS uses: ec2-user-1
+      UserName: ec2-user-1
+      # Means: group membership.
+      # AWS uses: [onward-compute-engineers]
+      Groups: [!Ref ComputeEngineersGroup]
+      # Means: the user's ceiling.
+      # AWS uses: arn:aws:iam::<account-id>:policy/onward-boundary-compute-engineer
+      PermissionsBoundary: !Ref ComputeEngineerBoundary
+      # Means: console password settings.
+      # AWS uses: the two values below.
+      LoginProfile:
+        # Means: read the generated password from Ec2User1Secret.
+        # AWS uses: the real password from onward/onboarding/ec2-user-1.
+        Password: !Sub "{{resolve:secretsmanager:${Ec2User1Secret}:SecretString:password}}"
+        # Means: force a new password at first sign-in.
+        # AWS uses: true
+        PasswordResetRequired: true
+      # Means: audit labels.
+      # AWS uses: Role = compute-engineer, ApprovedBy and Project from the parameters.
+      Tags:
+        - { Key: Role, Value: compute-engineer }
+        - { Key: ApprovedBy, Value: !Ref ApprovedBy }
+        - { Key: Project, Value: !Ref ProjectTag }
 
   # The on-call engineer. Read-only group plus the observer boundary that
   # denies creating or terminating compute.

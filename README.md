@@ -18,13 +18,11 @@ Weekly AWS labs for Onward Logistics, each built as infrastructure as code with 
 ├── docs/                                  # Shared across weeks
 │   ├── client-profile.md                  # Onward Logistics profile, company standards, requirements by week
 │   └── discovery-report-template.md       # Template for each week's discovery report
-├── week-1-secure-onboarding/
-│   ├── README.md                          # Week 1 overview, architecture, deployment, evidence
-│   ├── docs/                              # Lab brief, draw.io diagrams, PNG exports
-│   ├── templates/                         # CloudFormation template
-│   └── scripts/                           # Deploy-role bootstrap and evidence script
-└── week-2-secure-network/
-    └── README.md                          # Pointer: Week 2 moved to its own repository
+└── week-1-secure-onboarding/
+    ├── README.md                          # Week 1 overview, architecture, deployment, evidence
+    ├── docs/                              # Lab brief, draw.io diagrams, PNG exports
+    ├── templates/                         # CloudFormation template
+    └── scripts/                           # Deploy-role bootstrap and evidence script
 ```
 
 ## Conventions
